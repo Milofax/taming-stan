@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import fcntl, hashlib, json, os, time
+import fcntl, hashlib, json, os, re, subprocess, time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -84,6 +84,8 @@ SESSION_FLAGS = [
     "firecrawl_attempted",
     "graphiti_searched",
     "context7_attempted_for",
+    "active_group_ids",
+    "group_id_decision",
 ]
 
 def reset_session_flags() -> None:
@@ -118,3 +120,93 @@ def check_and_update_session(claude_session_id: str) -> bool:
         return True
 
     return False
+
+# --- Group ID Detection (shared across hooks) ---
+
+def find_git_root(start_path: str) -> str | None:
+    """Find Git root from a path."""
+    path = Path(start_path)
+    while path != path.parent:
+        if (path / ".git").exists():
+            return str(path)
+        path = path.parent
+    return None
+
+def get_github_repo(git_root: str) -> str | None:
+    """Extract owner/repo from GitHub remote URL."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", git_root, "remote", "get-url", "origin"],
+            capture_output=True, text=True, timeout=3
+        )
+        if result.returncode != 0:
+            return None
+        remote_url = result.stdout.strip()
+        if remote_url.startswith("git@github.com:"):
+            return remote_url[len("git@github.com:"):].removesuffix(".git")
+        if remote_url.startswith("https://github.com/"):
+            return remote_url[len("https://github.com/"):].removesuffix(".git")
+        return None
+    except Exception:
+        return None
+
+def detect_group_id(working_dir: str) -> tuple[str, str]:
+    """
+    Detect group_id from path. Returns (group_id, project_name).
+    Priority: .graphiti-group > CLAUDE.md > GitHub remote > "main"
+    """
+    if not working_dir:
+        return "main", ""
+    cwd_path = Path(working_dir)
+
+    # 1. Check .graphiti-group file
+    for check_path in [cwd_path] + list(cwd_path.parents):
+        graphiti_file = check_path / ".graphiti-group"
+        if graphiti_file.exists():
+            try:
+                content = graphiti_file.read_text().strip()
+                if content:
+                    if ":" in content:
+                        group_id, name = content.split(":", 1)
+                        return group_id.strip(), name.strip()
+                    return content, check_path.name
+            except Exception:
+                pass
+
+    # 2. Check CLAUDE.md for graphiti_group_id
+    for check_path in [cwd_path] + list(cwd_path.parents):
+        claude_md = check_path / "CLAUDE.md"
+        if claude_md.exists():
+            try:
+                content = claude_md.read_text()
+                match = re.search(r'graphiti_group_id:\s*(\S+)', content)
+                if match:
+                    return match.group(1).strip(), check_path.name
+            except Exception:
+                pass
+
+    # 3. Git-based: GitHub remote only (no folder fallback)
+    git_root = find_git_root(working_dir)
+    if git_root:
+        github_repo = get_github_repo(git_root)
+        if github_repo:
+            # Convert Owner/Repo to Owner-Repo (Graphiti rejects slashes)
+            return github_repo.replace("/", "-"), Path(git_root).name
+
+    return "main", ""
+
+def track_group_id_for_path(file_path: str) -> str | None:
+    """
+    Detect group_id for a file path and add to active_group_ids.
+    Returns the detected group_id or None.
+    """
+    if not file_path:
+        return None
+    # Get directory from file path
+    path = Path(file_path)
+    working_dir = str(path.parent) if path.is_file() or not path.exists() else str(path)
+
+    group_id, _ = detect_group_id(working_dir)
+    if group_id and group_id != "main":
+        append_to_list("active_group_ids", group_id)
+    return group_id
