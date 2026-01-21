@@ -144,14 +144,14 @@ class TestSessionReminder:
         assert "systemMessage" in output
         assert isinstance(output["systemMessage"], str)
 
-    def test_shows_project_context(self):
+    def test_shows_group_id_context(self):
         output = TestHookRunner.run(SESSION_REMINDER_PATH, {
             "user_prompt": "test",
             "cwd": "/tmp"
         })
         message = output.get("systemMessage", "")
-        # Should show project context (📁 or Kontext or Projekt)
-        assert "📁" in message or "kontext" in message.lower() or "projekt" in message.lower()
+        # Should show group_id context info
+        assert "group_id" in message.lower() or "graphiti" in message.lower()
 
     def test_shows_main_for_non_project_dir(self):
         output = TestHookRunner.run(SESSION_REMINDER_PATH, {

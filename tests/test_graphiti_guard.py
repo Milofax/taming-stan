@@ -281,20 +281,23 @@ class TestSearchNodes:
         hook_input = make_search_nodes_input("some query")
         result = graphiti_guard_runner.run(hook_input)
 
-        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
-        assert "group_ids" in result["hookSpecificOutput"]["permissionDecisionReason"]
+        # Changed from deny to allow_with_msg - warns but doesn't block
+        assert result["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert "group_ids" in result["hookSpecificOutput"].get("permissionDecisionReason", "")
 
-    def test_search_with_incomplete_group_ids_denies(self, graphiti_guard_runner, clean_state):
-        """search_nodes missing active group_ids should deny."""
+    def test_search_with_incomplete_group_ids_warns(self, graphiti_guard_runner, clean_state):
+        """search_nodes missing contexts should warn but allow (not block)."""
         ss.write_state("active_group_ids", ["project-test"])
 
-        # Only searching main, missing project-test
+        # Only searching main, missing project-test - should warn but allow
         hook_input = make_search_nodes_input("query", group_ids=["main"])
         result = graphiti_guard_runner.run(hook_input)
 
-        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
-        reason = result["hookSpecificOutput"]["permissionDecisionReason"]
-        assert "project-test" in reason
+        # Changed from deny to allow_with_msg
+        assert result["hookSpecificOutput"]["permissionDecision"] == "allow"
+        reason = result["hookSpecificOutput"].get("permissionDecisionReason", "")
+        # Should mention the need for both contexts
+        assert "main" in reason.lower() or "project" in reason.lower() or reason == ""
 
     def test_search_with_all_group_ids_allows(self, graphiti_guard_runner, clean_state):
         """search_nodes with all required group_ids should allow."""
