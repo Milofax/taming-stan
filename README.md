@@ -228,6 +228,31 @@ Diese Hooks werden automatisch installiert wenn ANY Service mit Hooks gewählt w
 
 ## Development
 
+### Hook-Kontrakt
+
+**WICHTIG:** Alle Hooks MÜSSEN immer gültiges JSON ausgeben!
+
+```python
+# RICHTIG - immer JSON ausgeben
+def main():
+    try:
+        hi = json.load(sys.stdin)
+    except:
+        print(json.dumps({"continue": True}))  # ← Auch bei Fehler!
+        return
+
+    if not should_show_message():
+        print(json.dumps({"continue": True}))  # ← Auch ohne Message!
+        return
+
+    print(json.dumps({"continue": True, "systemMessage": "..."}))
+
+# FALSCH - Claude Code erwartet JSON
+def main():
+    if not should_show_message():
+        return  # ← Hook Error!
+```
+
 ### Tests
 ```bash
 # Alle Tests
