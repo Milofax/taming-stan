@@ -84,13 +84,10 @@ def main():
     gid, pn, warning = detect_group_id(hi.get("cwd",""))
     # Store group_id for other hooks to use
     write_state("project_group_id", gid)
-    # Only show project context (Graphiti reminder is in graphiti-knowledge-reminder.py)
-    if gid != "main" and pn:
-        msg = f"📁 Projekt: {pn}\n   group_id: {gid}"
-        if warning:
-            msg += f"\n\n{warning}"
-    else:
-        msg = "📁 Kontext: main (persönlich)"
+    # Just show group_id - that's all that matters
+    msg = f"📁 {gid}"
+    if warning:
+        msg += f" | {warning}"
     print(json.dumps({"continue": True, "systemMessage": msg}))
 
 if __name__ == "__main__": main()

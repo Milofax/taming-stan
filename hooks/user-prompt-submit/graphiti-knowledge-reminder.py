@@ -38,11 +38,10 @@ def main():
         gids.append(project_gid)
     gids_str = '", "'.join(gids)
 
-    # Output systemMessage as reminder (does NOT block)
-    # Zettelkasten principle: Knowledge only has value if you access it
+    # Compact reminder - just the action
     output = {
         "continue": True,
-        "systemMessage": f"💡 !!zettelkasten:Knowledge∧Access=Value\n   →search_nodes(group_ids=[\"{gids_str}\"])"
+        "systemMessage": f"💡 search_nodes([\"{gids_str}\"])"
     }
     print(json.dumps(output))
 
