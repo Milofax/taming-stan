@@ -5,6 +5,22 @@ HOOK_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HOOK_DIR, '..', 'lib'))
 from session_state import write_state
 
+def get_default_owner():
+    """Get default owner from config file or environment variable.
+    Owner prefix is REQUIRED for Graphiti group_ids to avoid namespace collisions.
+    """
+    # 1. Environment variable
+    owner = os.environ.get("GRAPHITI_OWNER")
+    if owner: return owner
+    # 2. Config file in HOME
+    config_file = Path.home() / ".graphiti-owner"
+    if config_file.exists():
+        try:
+            return config_file.read_text().strip()
+        except: pass
+    # 3. Fallback - should be configured!
+    return None
+
 def find_git_root(p):
     path = Path(p)
     while path != path.parent:
@@ -23,33 +39,40 @@ def get_github_repo(root):
     return None
 
 def detect_group_id(cwd):
-    if not cwd: return "main",""
+    if not cwd: return "main","",None
     p = Path(cwd)
+    # Check for explicit config files
     for cp in [p]+list(p.parents):
         gf = cp / ".graphiti-group"
         if gf.exists():
             try:
                 c = gf.read_text().strip()
                 if c:
-                    if ":" in c: g,n = c.split(":",1); return g.strip(),n.strip()
-                    return c, cp.name
+                    if ":" in c: g,n = c.split(":",1); return g.strip(),n.strip(),None
+                    return c, cp.name, None
             except: pass
         cf = cp / "CLAUDE.md"
         if cf.exists():
             try:
                 m = re.search(r'graphiti_group_id:\s*(\S+)', cf.read_text())
-                if m: return m.group(1).strip(), cp.name
+                if m: return m.group(1).strip(), cp.name, None
             except: pass
+    # Try GitHub remote
     gr = find_git_root(cwd)
     if gr:
         pn = Path(gr).name
         repo = get_github_repo(gr)
         if repo:
-            # Replace slash with hyphen (Graphiti rejects slashes, but keep owner for uniqueness)
+            # Replace slash with hyphen (Owner/Repo -> Owner-Repo)
             group_id = repo.replace("/", "-")
-            return group_id, pn
-        return f"project-{pn.lower()}", pn
-    return "main", ""
+            return group_id, pn, None
+        # No GitHub remote - need default owner
+        default_owner = get_default_owner()
+        if default_owner:
+            return f"{default_owner}-{pn.lower()}", pn, None
+        # No owner configured - return warning
+        return f"project-{pn.lower()}", pn, "⚠️ Kein Owner-Präfix! Erstelle ~/.graphiti-owner mit deinem GitHub-Username"
+    return "main", "", None
 
 def main():
     try: hi = json.load(sys.stdin)
@@ -58,12 +81,14 @@ def main():
         return
     write_state("graphiti_searched", False)
     write_state("memory_saved", False)
-    gid,pn = detect_group_id(hi.get("cwd",""))
+    gid, pn, warning = detect_group_id(hi.get("cwd",""))
     # Store group_id for other hooks to use
     write_state("project_group_id", gid)
     # Only show project context (Graphiti reminder is in graphiti-knowledge-reminder.py)
     if gid != "main" and pn:
         msg = f"📁 Projekt: {pn}\n   group_id: {gid}"
+        if warning:
+            msg += f"\n\n{warning}"
     else:
         msg = "📁 Kontext: main (persönlich)"
     print(json.dumps({"continue": True, "systemMessage": msg}))
