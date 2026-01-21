@@ -38,10 +38,10 @@ def main():
         gids.append(project_gid)
     gids_str = '", "'.join(gids)
 
-    # Compact reminder - just the action
+    # Zettelkasten principle: Knowledge only has value if accessed
     output = {
         "continue": True,
-        "systemMessage": f"💡 search_nodes([\"{gids_str}\"])"
+        "systemMessage": f"💡 !!Zettelkasten=Value: search_nodes([\"{gids_str}\"])"
     }
     print(json.dumps(output))
 
