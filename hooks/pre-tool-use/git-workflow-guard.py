@@ -169,22 +169,30 @@ def extract_commit_message(args: list, raw_command: str = None) -> str | None:
     """Extract commit message from git commit arguments.
     Falls back to raw command parsing for complex cases like HEREDOC.
     """
+    message = None
+
     # First try: parsed args (fast path)
     try:
         for i, arg in enumerate(args):
             if arg == "-m" and i + 1 < len(args):
-                return args[i + 1]
+                message = args[i + 1]
+                break
             if arg.startswith("-m"):
                 # -m"message" or -mmessage
-                return arg[2:].strip('"\'')
+                message = arg[2:].strip('"\'')
+                break
     except:
         pass
 
+    # If message looks like shell substitution $(cat...), use raw parsing
+    if message and message.startswith("$("):
+        message = None
+
     # Second try: raw command parsing (handles HEREDOC)
-    if raw_command:
+    if message is None and raw_command:
         return extract_commit_message_from_raw(raw_command)
 
-    return None
+    return message
 
 def main():
     try:

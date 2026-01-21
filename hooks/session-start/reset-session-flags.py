@@ -19,17 +19,22 @@ from session_state import check_and_update_session, run_once
 def main():
     # Deduplicate: Skip if already ran (global + local installation)
     if not run_once("reset-session-flags"):
+        print(json.dumps({}))
         return
 
     try:
         hook_input = json.load(sys.stdin)
     except json.JSONDecodeError:
+        print(json.dumps({}))
         return
 
     # Check for new session and reset flags if needed
     session_id = hook_input.get("session_id", "")
     if session_id:
         check_and_update_session(session_id)
+
+    # SessionStart hooks must output JSON
+    print(json.dumps({}))
 
 if __name__ == "__main__":
     main()

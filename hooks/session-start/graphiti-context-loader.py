@@ -116,12 +116,13 @@ def detect_group_id(working_dir: str) -> tuple[str, str]:
 def main():
     # Deduplicate: Skip if already ran (global + local installation)
     if not run_once("graphiti-context-loader"):
+        print(json.dumps({}))
         return
 
     try:
         hook_input = json.load(sys.stdin)
     except json.JSONDecodeError:
-        # No input, nothing to output
+        print(json.dumps({}))
         return
 
     # Check for new session and reset flags if needed
@@ -161,8 +162,8 @@ def main():
 
     context = "\n".join(context_parts)
 
-    # Plain text output - Claude Code adds this as context
-    print(context)
+    # SessionStart hooks must output JSON with additionalContext
+    print(json.dumps({"additionalContext": context}))
 
 
 if __name__ == "__main__":
