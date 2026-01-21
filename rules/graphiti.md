@@ -94,11 +94,11 @@ Revision≠version-im-text:Revision=strukturierte Entity mit Beziehungen|version
 
 ## workflow
 !!before_add_memory:group_id ENTSCHEIDEN bevor add_memory aufgerufen wird
-  |hook_zeigt:Hook zeigt aktuellen Kontext→VERWENDEN(project-*)
-  |procedure:FAST IMMER projekt-spezifisch→project-*
-  |requirement:FAST IMMER projekt-spezifisch→project-*
-  |learning:Allgemeingültig?→JA:main|NEIN:project-*
-  |decision:Übertragbar auf andere Projekte?→JA:main|NEIN:project-*
+  |hook_zeigt:Hook zeigt aktuellen Kontext (Owner-RepoName)→VERWENDEN
+  |procedure:FAST IMMER projekt-spezifisch→Owner-RepoName
+  |requirement:FAST IMMER projekt-spezifisch→Owner-RepoName
+  |learning:Allgemeingültig?→JA:main|NEIN:Owner-RepoName
+  |decision:Übertragbar auf andere Projekte?→JA:main|NEIN:Owner-RepoName
   |warnsignal:add_memory ohne group_id-Überlegung=STOP
   |verstoß:Falsches group_id→Kontamination→manuelles Cleanup nötig
 speichern:add_memory(name,episode_body,source_description,group_id)→automatische Entity-Extraktion
@@ -115,7 +115,7 @@ leer:search gibt nichts→Recherche- und Suchtools nutzen→Ergebnis speichern m
 !!3_strikes:Nach 3 Tool-Fehlern→search Graphiti VOR Retry
   |prinzip:Existierende Learnings könnten das Problem lösen
   |trigger:PostToolUse Hook blockt beim 3. Fehler
-  |aktion:search_nodes(query="[Fehler]",group_ids=["main","project-*"])
+  |aktion:search_nodes(query="[Fehler]",group_ids=["main","Owner-RepoName"])
   |danach:Retry erlaubt(aber Counter läuft weiter)
 
 ## sofort_speichern
@@ -123,7 +123,7 @@ leer:search gibt nichts→Recherche- und Suchtools nutzen→Ergebnis speichern m
   |trigger:Fehler gelöst|Neues Pattern entdeckt|Gotcha gefunden|Workaround funktioniert
   |nicht_warten:Nicht auf 3-Strikes warten→beim ERSTEN Mal speichern
   |verstoß:Learning nicht gespeichert→nächste Session weiß nichts→gleicher Fehler wieder
-  |format:add_memory(name:"[Tool/Context]: [Learning]",episode_body:"[Details mit Version]",source:"Eigene Erfahrung [Datum]",group_id:"[project|main]")
+  |format:add_memory(name:"[Tool/Context]: [Learning]",episode_body:"[Details mit Version]",source:"Eigene Erfahrung [Datum]",group_id:"[Owner-RepoName|main]")
   |beispiele:
     - "Bash git push: noreply email required for GitHub"
     - "MCP bridge_tool: arguments must be object not string"
@@ -146,7 +146,7 @@ leer:search gibt nichts→Recherche- und Suchtools nutzen→Ergebnis speichern m
 
 ## group_id_trennung
 !!separation:Langfristiges Wissen GETRENNT von kontextgebundenem Wissen
-  |prinzip:main=überlebt alles|project-*=löschbar nach Kontext-Ende
+  |prinzip:main=überlebt alles|Owner-RepoName=löschbar nach Kontext-Ende
   |verstoß:Temporäres Wissen in "main"→Kontamination→main aufgebläht→nicht mehr wartbar
   |trigger:add_memory→IMMER fragen:"Ist das langfristig relevant oder nur hier?"
   |warnsignal:"Ich speichere..." ohne group_id-Überlegung=STOP
@@ -155,43 +155,48 @@ leer:search gibt nichts→Recherche- und Suchtools nutzen→Ergebnis speichern m
   |bleibt_relevant:Kontakte|Learnings|Decisions|Preferences|Goals|Concepts|Documents|Works
   |beispiel:Learning "GraphQL ist für kleine Teams overkill"→main(gilt immer)
   |beispiel:Decision "FalkorDB statt Neo4j wegen Einfachheit"→main(Erfahrungswert)
-!kontext:Kontextgebundenes,begrenztes Wissen→group_id:"project-[name]"(TEMPORÄR)
+!kontext:Kontextgebundenes,begrenztes Wissen→group_id:"Owner-RepoName"(TEMPORÄR)
   |nur_hier_relevant:Requirements|Procedures|Architektur-Details|Projekt-Tasks
-  |beispiel:Requirement "API braucht /health endpoint"→project-*(nur dieses Projekt)
-  |beispiel:Procedure "Deploy via git push + docker compose"→project-*(nur dieses Repo)
+  |beispiel:Requirement "API braucht /health endpoint"→Milofax-my-api(nur dieses Projekt)
+  |beispiel:Procedure "Deploy via git push + docker compose"→Milofax-infrastructure(nur dieses Repo)
 !suche_default:Ohne group_ids→sucht nur in "main"|Mit group_ids→sucht in angegebenen
 
 ## group_ids
-!naming:Name FREI WÄHLBAR|Einzige Ausnahme:"main" ist RESERVIERT
+!!format:Owner-RepoName mit BINDESTRICH (NICHT Slash!)
+  |grund:FalkorDB akzeptiert keine Slashes in group_id
+  |richtig:Milofax-taming-stan|Milofax-infrastructure|Milofax-prp
+  |falsch:Milofax/taming-stan(Slash wird von Graphiti abgelehnt→silent data loss)
+  |hook_macht:Hook ersetzt automatisch "/" durch "-"
+!naming:Format=Owner-RepoName|Ausnahme:"main" ist RESERVIERT
 !main_reserviert:"main"=NIEMALS für Projekte|NIEMALS löschen|Langfristig+Permanent
-beispiele_gültig:prp|infrastructure|bmad-v2|kunde-xyz|2024-redesign
-beispiele_ungültig:main(reserviert)
+beispiele_gültig:Milofax-prp|Milofax-infrastructure|Milofax-bmad-v2|kunde-xyz
+beispiele_ungültig:main(reserviert)|Milofax/repo(Slash verboten)
 
 main:Langfristiges Wissen(PERMANENT)|Kontakte,Learnings,Decisions,Preferences,Goals,Concepts,Documents,Works
   |NIEMALS löschen|Überlebt alle Kontexte
   |frage:"Werde ich das in 5 Jahren noch wissen wollen?"→JA=main
-[frei-wählbar]:Kontextgebundenes Wissen(TEMPORÄR)|Requirements,Procedures,Architektur,Projekt-Tasks
-  |Name frei wählbar,z.B.:prp,infrastructure,kunde-abc
-  |Löschen erlaubt nach Kontext-Ende:clear_graph(group_ids:["dein-name"])
-  |frage:"Ist das nur für diesen Kontext relevant?"→JA=project-*
+Owner-RepoName:Kontextgebundenes Wissen(TEMPORÄR)|Requirements,Procedures,Architektur,Projekt-Tasks
+  |Format:Owner-RepoName(z.B.Milofax-infrastructure)
+  |Löschen erlaubt nach Kontext-Ende:clear_graph(group_ids:["Milofax-projektname"])
+  |frage:"Ist das nur für diesen Kontext relevant?"→JA=Owner-RepoName
 
 ## wann_welche_group
 main:Learning(allgemeingültig)|Decision(übertragbar)|Kontakt|Präferenz|Ziel|Concept|Document|Work
-project-*:Requirement(projektspezifisch)|Procedure(kontextspezifisch)|Architektur-Detail|Projekt-Task
-beide_suchen:Arbeit in Kontext→search(group_ids:["main","project-xyz"])|Langfristig+Kontext
+Owner-RepoName:Requirement(projektspezifisch)|Procedure(kontextspezifisch)|Architektur-Detail|Projekt-Task
+beide_suchen:Arbeit in Kontext→search(group_ids:["main","Milofax-reponame"])|Langfristig+Kontext
 
 ## group_workflow
-kontext_start:Dateien indexieren mit group_id:"project-[name]"
-kontext_arbeit:search(group_ids:["main","project-[name]"])→beides durchsuchen
-kontext_ende:ERST langfristiges Wissen nach "main" promoten→DANN clear_graph(group_ids:["project-[name]"])
+kontext_start:Dateien indexieren mit group_id:"Owner-RepoName"
+kontext_arbeit:search(group_ids:["main","Owner-RepoName"])→beides durchsuchen
+kontext_ende:ERST langfristiges Wissen nach "main" promoten→DANN clear_graph(group_ids:["Owner-RepoName"])
 übertragbar:Learning/Decision aus Kontext→nach "main" speichern(bleibt permanent)
 
 ## kontext_erkennung
-aus_pfad:Working Directory→group_id ableiten
-  |/Volumes/DATEN/Coding/PRP→project-prp
-  |/Volumes/DATEN/Coding/INFRASTRUCTURE→project-infrastructure
+aus_git:Hook erkennt GitHub Remote→Owner/Repo→ersetzt "/" durch "-"
+  |beispiel:Milofax/taming-stan→Milofax-taming-stan
+  |beispiel:Milofax/infrastructure→Milofax-infrastructure
 aus_claude_md:CLAUDE.md kann graphiti_group_id definieren(wenn vorhanden)
-fallback:Unsicher welcher Kontext?→User fragen:"Welche group_id soll ich verwenden?"
+fallback:Kein Git Remote?→User fragen:"Welche group_id soll ich verwenden?"
 
 ## vor_kontext_ende
 !!review:VOR clear_graph→IMMER langfristig relevantes Wissen reviewen
@@ -202,7 +207,7 @@ fallback:Unsicher welcher Kontext?→User fragen:"Welche group_id soll ich verwe
   |verstoß:Wertvolles Wissen nicht promotet→nach clear_graph verloren
 !verlust:Nach clear_graph ist Kontext-Wissen WEG|Nur "main" Wissen überlebt
 beispiel:Learning "Claude Opus 4.5 über CLIProxyAPI funktioniert gut"→nach main(allgemeingültig)
-beispiel:Requirement "API muss /health haben"→NICHT nach main(nur für diesen Kontext)
+beispiel:Requirement "API muss /health haben"→NICHT nach main(nur für Milofax-my-api)
 
 ## params
 add_memory:name(required)|episode_body(required)|source_description(required)|group_id(default:"main")|source:"text"|"json"|"message"
