@@ -292,22 +292,29 @@ def main():
         gids = args.get("group_ids", [])
         state = read_state()
 
-        # All active_group_ids MUST be searched
+        # main + at least 1 other context required (NOT all contexts)
         active_gids = state.get("active_group_ids", [])
-        required_gids = set(active_gids + ["main"])  # main is always included
+        all_contexts = set(active_gids + ["main"])
 
         if gids:
             provided_gids = set(gids)
-            missing = required_gids - provided_gids
-            if missing:
-                all_required = '", "'.join(sorted(required_gids))
-                missing_str = ", ".join(sorted(missing))
-                print(json.dumps(deny(f"💡 Not all contexts searched. Missing: {missing_str}\n→group_ids=[\"{all_required}\"]")))
+            has_main = "main" in provided_gids
+            has_other = len(provided_gids - {"main"}) > 0
+
+            if not has_main or not has_other:
+                all_required = '", "'.join(sorted(all_contexts))
+                msg = "💡 Search both main AND project context!"
+                if not has_main:
+                    msg += "\n→Missing: main"
+                if not has_other and active_gids:
+                    msg += f"\n→Missing: at least one of [{', '.join(sorted(active_gids))}]"
+                msg += f"\n→Recommended: group_ids=[\"{all_required}\"]"
+                print(json.dumps(allow_with_msg(msg)))
                 return
         else:
-            # No group_ids provided - all required
-            all_required = '", "'.join(sorted(required_gids))
-            print(json.dumps(deny(f"💡 group_ids missing.\n→group_ids=[\"{all_required}\"]")))
+            # No group_ids provided - remind about all contexts (not blocking)
+            all_required = '", "'.join(sorted(all_contexts))
+            print(json.dumps(allow_with_msg(f"💡 Remember to search all contexts!\n→group_ids=[\"{all_required}\"]")))
             return
         print(json.dumps(allow())); return
 

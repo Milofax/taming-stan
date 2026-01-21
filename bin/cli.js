@@ -955,7 +955,13 @@ function updateSettings(selectedServices, newHookCommands, hierarchyHooks = []) 
   const settings = readSettings();
   if (!settings.hooks) settings.hooks = {};
 
-  const isOurHook = (command) => command && command.includes(PACKAGE_NAME);
+  // Match our package AND legacy packages that should be cleaned up
+  const isOurHook = (command) => command && (
+    command.includes(PACKAGE_NAME) ||
+    command.includes('shared-claude-rules') ||
+    command.includes('claude-hooks-core') ||
+    command.includes('graphiti-claude-integration')
+  );
 
   // Clean up all our package's hook entries
   for (const hookType of ['PreToolUse', 'PostToolUse', 'SessionStart', 'UserPromptSubmit']) {
@@ -1249,14 +1255,19 @@ async function uninstall() {
     deleteFile(rulePath);
   }
 
-  // Clean settings.json
+  // Clean settings.json (including legacy packages)
   const settings = readSettings();
   if (settings.hooks) {
-    const packageMarker = `/${PACKAGE_NAME}/`;
+    const isLegacyOrOurs = (cmd) => cmd && (
+      cmd.includes(PACKAGE_NAME) ||
+      cmd.includes('shared-claude-rules') ||
+      cmd.includes('claude-hooks-core') ||
+      cmd.includes('graphiti-claude-integration')
+    );
     for (const hookType of Object.keys(settings.hooks)) {
       settings.hooks[hookType] = settings.hooks[hookType].map(entry => {
         if (!entry.hooks) return entry;
-        entry.hooks = entry.hooks.filter(h => !h.command || !h.command.includes(packageMarker));
+        entry.hooks = entry.hooks.filter(h => !h.command || !isLegacyOrOurs(h.command));
         return entry;
       }).filter(entry => entry.hooks && entry.hooks.length > 0);
       if (settings.hooks[hookType].length === 0) {
@@ -1265,6 +1276,26 @@ async function uninstall() {
     }
     writeSettings(settings);
     log('Updated settings.json');
+  }
+
+  // Clean up legacy hook/rule folders
+  const legacyFolders = [
+    path.join(CLAUDE_DIR, 'hooks', 'shared-claude-rules'),
+    path.join(CLAUDE_DIR, 'hooks', 'claude-hooks-core'),
+    path.join(CLAUDE_DIR, 'hooks', 'graphiti-claude-integration'),
+    path.join(CLAUDE_DIR, 'rules', 'shared-claude-rules'),
+    path.join(CLAUDE_DIR, 'rules', 'claude-hooks-core'),
+    path.join(CLAUDE_DIR, 'rules', 'graphiti-claude-integration')
+  ];
+  for (const folder of legacyFolders) {
+    if (fs.existsSync(folder)) {
+      try {
+        fs.rmSync(folder, { recursive: true });
+        log(`Removed legacy folder: ${path.basename(folder)}`);
+      } catch (e) {
+        // Ignore errors
+      }
+    }
   }
 
   // Clean up
@@ -1424,15 +1455,21 @@ async function main() {
         const alreadyInstalled = detectInstalledServices();
 
         if (hierarchyCheck.found) {
+          // If installing in the SAME location as hierarchy, update hooks instead of skipping
+          const isInstallingInHierarchyLocation = CWD === hierarchyCheck.location;
           selected = await promptServiceSelection(
             alreadyInstalled,
-            hierarchyCheck.services,
-            hierarchyCheck.location
+            isInstallingInHierarchyLocation ? [] : hierarchyCheck.services,
+            isInstallingInHierarchyLocation ? null : hierarchyCheck.location
           );
-          installServices(selected, {
-            lockedServices: hierarchyCheck.services,
-            hierarchyHooks: hierarchyCheck.hooks
-          });
+          if (isInstallingInHierarchyLocation) {
+            installServices(selected);  // No hierarchyHooks = will overwrite existing
+          } else {
+            installServices(selected, {
+              lockedServices: hierarchyCheck.services,
+              hierarchyHooks: hierarchyCheck.hooks
+            });
+          }
         } else {
           selected = await promptServiceSelection(alreadyInstalled);
           installServices(selected);
@@ -1442,11 +1479,18 @@ async function main() {
         log(`Non-interactive mode: installing ${selected.length} services`);
 
         if (hierarchyCheck.found) {
-          log(`Hooks inherited from: ${hierarchyCheck.location}`);
-          installServices(selected, {
-            lockedServices: hierarchyCheck.services,
-            hierarchyHooks: hierarchyCheck.hooks
-          });
+          // If installing in the SAME location as hierarchy, update hooks instead of skipping
+          const isInstallingInHierarchyLocation = CWD === hierarchyCheck.location;
+          if (isInstallingInHierarchyLocation) {
+            log(`Updating hooks in: ${hierarchyCheck.location}`);
+            installServices(selected);  // No hierarchyHooks = will overwrite existing
+          } else {
+            log(`Hooks inherited from: ${hierarchyCheck.location}`);
+            installServices(selected, {
+              lockedServices: hierarchyCheck.services,
+              hierarchyHooks: hierarchyCheck.hooks
+            });
+          }
         } else {
           installServices(selected);
         }
