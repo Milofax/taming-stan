@@ -234,7 +234,7 @@ def main():
 
                 # Format question based on number of options
                 if len(options) == 1 and options[0] == "main":
-                    msg = f"💡 No project context. Save to 'main' (permanent)?\n→Repeat with group_id='main'"
+                    msg = f"💡 No project context. Save to 'main' (permanent)?\n→yes: Repeat with group_id='main'"
                 elif len(options) == 2 and "main" in options:
                     proj = [o for o in options if o != "main"][0]
                     msg = f"💡 Where to save?\n• {proj} (project-specific)\n• main (permanent)\n→Set group_id, repeat"
