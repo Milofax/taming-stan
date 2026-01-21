@@ -12,9 +12,9 @@ All-in-one Claude Code Enhancement: Graphiti Memory, Intelligent Guards, und STA
 ## Quick Start
 
 ```bash
-npx taming-stan install              # Interaktiv
-npx taming-stan install --all        # Alle Services
-npx taming-stan install graphiti stanflux git-workflow-github-flow
+npx github:Milofax/taming-stan install              # Interaktiv
+npx github:Milofax/taming-stan install --all        # Alle Services
+npx github:Milofax/taming-stan install graphiti stanflux git-workflow-github-flow
 ```
 
 ---
@@ -357,23 +357,23 @@ echo "DeinGitHubUsername" > ~/.graphiti-owner
 
 ### Global (HOME)
 ```bash
-cd ~ && npx taming-stan install
+cd ~ && npx github:Milofax/taming-stan install
 ```
 Hooks gelten für alle Projekte. Rules werden global installiert.
 
 ### Projekt-spezifisch
 ```bash
-cd /your/project && npx taming-stan install
+cd /your/project && npx github:Milofax/taming-stan install
 ```
 Wenn HOME bereits Hooks hat, werden nur Rules lokal installiert.
 
 ### Commands
 ```bash
-npx taming-stan install                     # Interaktiv
-npx taming-stan install --all               # Alle Services
-npx taming-stan install <service,...>       # Bestimmte Services
-npx taming-stan uninstall                   # Alles entfernen
-npx taming-stan status                      # Status anzeigen
+npx github:Milofax/taming-stan install                     # Interaktiv
+npx github:Milofax/taming-stan install --all               # Alle Services
+npx github:Milofax/taming-stan install <service,...>       # Bestimmte Services
+npx github:Milofax/taming-stan uninstall                   # Alles entfernen
+npx github:Milofax/taming-stan status                      # Status anzeigen
 ```
 
 ---
@@ -448,7 +448,7 @@ Falls du vorher separate Pakete genutzt hast:
 ```bash
 cd ~ && npx graphiti-claude-integration uninstall 2>/dev/null
 cd ~ && npx shared-claude-rules uninstall 2>/dev/null
-cd ~ && npx taming-stan install --all
+cd ~ && npx github:Milofax/taming-stan install --all
 ```
 
 ## License
