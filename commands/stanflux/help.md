@@ -8,7 +8,6 @@ Zeige verfügbare STAN.FLUX Commands und wie sie zu nutzen sind.
 |---------|-------------|
 | `/stanflux:retro` | Retrospektive - Learnings identifizieren, Regeln verbessern |
 | `/stanflux:challenge` | Idee/Entscheidung aus 6 Perspektiven herausfordern |
-| `/stanflux:status` | Aktueller Stand und nächste Schritte |
 | `/stanflux:help` | Diese Hilfe anzeigen |
 
 ## STAN.FLUX Kurzübersicht
