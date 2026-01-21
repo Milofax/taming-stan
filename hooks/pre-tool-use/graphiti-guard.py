@@ -214,12 +214,12 @@ def main():
         active_gids = state.get("active_group_ids", [])
         proj_gid = state.get("project_group_id", "")
 
-        # If agent explicitly set a project-specific group_id (not main) → allow without asking
-        # Only ask when: no group_id set OR group_id is "main" (needs confirmation)
-        explicit_project_gid = gid and gid.strip() and gid.strip() != "main"
+        # If agent explicitly set ANY group_id (including "main") → skip context selection
+        # The "main = permanent" confirmation happens separately at line 262+
+        explicit_gid_provided = gid and gid.strip()
 
-        if not explicit_project_gid:
-            # No explicit project group_id → need to confirm where to save
+        if not explicit_gid_provided:
+            # No group_id provided → need to ask which context to use
             # Check if group_id decision was already made
             gid_decision = state.get("group_id_decision", {})
             gid_decision_made = (gid_decision.get("name") == name and
