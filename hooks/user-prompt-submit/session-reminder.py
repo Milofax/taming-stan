@@ -53,14 +53,17 @@ def detect_group_id(cwd):
 
 def main():
     try: hi = json.load(sys.stdin)
-    except: return
+    except:
+        print(json.dumps({"continue": True}))
+        return
     write_state("graphiti_searched", False)
     write_state("memory_saved", False)
     gid,pn = detect_group_id(hi.get("cwd",""))
     if gid != "main" and pn:
         gids_str = f'"{gid}", "main"'
-        print(f"📁 Projekt: {pn}\n   group_id: {gid}\n\n❌ !!graphiti_erst:PFLICHT vor Antwort\n   |auch_bei:Summary,Compaction,\"continue\"\n   |verstoß:Summary≠vollständig→Wissen verloren\n   →search_nodes(group_ids=[{gids_str}])")
+        msg = f"📁 Projekt: {pn}\n   group_id: {gid}\n\n❌ !!graphiti_erst:PFLICHT vor Antwort\n   |auch_bei:Summary,Compaction,\"continue\"\n   |verstoß:Summary≠vollständig→Wissen verloren\n   →search_nodes(group_ids=[{gids_str}])"
     else:
-        print("📁 main (persönlich)\n\n❌ !!graphiti_erst:PFLICHT vor Antwort\n   |auch_bei:Summary,Compaction,\"continue\"\n   |verstoß:Summary≠vollständig→Wissen verloren\n   →search_nodes(group_ids=[\"main\"])")
+        msg = "📁 main (persönlich)\n\n❌ !!graphiti_erst:PFLICHT vor Antwort\n   |auch_bei:Summary,Compaction,\"continue\"\n   |verstoß:Summary≠vollständig→Wissen verloren\n   →search_nodes(group_ids=[\"main\"])"
+    print(json.dumps({"continue": True, "systemMessage": msg}))
 
 if __name__ == "__main__": main()
