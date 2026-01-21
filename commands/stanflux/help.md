@@ -6,10 +6,10 @@ Zeige verfügbare STAN.FLUX Commands und wie sie zu nutzen sind.
 
 | Command | Beschreibung |
 |---------|-------------|
-| `/stan:retro` | Retrospektive durchführen - Learnings identifizieren und Regeln verbessern |
-| `/stan:challenge` | Idee/Entscheidung aus 6 Perspektiven herausfordern |
-| `/stan:status` | Aktuellen Stand zeigen und nächste Schritte vorschlagen |
-| `/stan:help` | Diese Hilfe anzeigen |
+| `/stanflux:retro` | Retrospektive - Learnings identifizieren, Regeln verbessern |
+| `/stanflux:challenge` | Idee/Entscheidung aus 6 Perspektiven herausfordern |
+| `/stanflux:status` | Aktueller Stand und nächste Schritte |
+| `/stanflux:help` | Diese Hilfe anzeigen |
 
 ## STAN.FLUX Kurzübersicht
 
@@ -32,4 +32,4 @@ Zeige verfügbare STAN.FLUX Commands und wie sie zu nutzen sind.
 
 ## Regeln anpassen
 
-Die Regeln befinden sich in `stanflux.md`. Änderungen sollten über `/stan:retro` erfolgen, um sicherzustellen dass sie aus echten Patterns entstehen.
+Die Regeln befinden sich in `stanflux.md`. Änderungen sollten über `/stanflux:retro` erfolgen, um sicherzustellen dass sie aus echten Patterns entstehen.
