@@ -63,7 +63,8 @@ class TestGraphitiKnowledgeReminder:
         assert "systemMessage" in output
         assert "search_nodes" in output["systemMessage"]
 
-    def test_no_output_when_graphiti_not_available(self):
+    def test_always_outputs_json_when_graphiti_not_available(self):
+        """Hooks MUST always output valid JSON - Claude Code requires it."""
         from session_state import write_state
         write_state("graphiti_available", False)
 
@@ -74,10 +75,15 @@ class TestGraphitiKnowledgeReminder:
             text=True,
             timeout=10
         )
-        # Should not output anything when Graphiti is not available
         assert result.returncode == 0
+        # MUST output valid JSON even when not showing a message
+        output = json.loads(result.stdout.strip())
+        assert output["continue"] == True
+        # Should NOT have systemMessage when graphiti not available
+        assert "systemMessage" not in output or output.get("systemMessage") is None
 
-    def test_no_spam_when_already_searched(self):
+    def test_always_outputs_json_when_already_searched(self):
+        """Hooks MUST always output valid JSON - Claude Code requires it."""
         from session_state import write_state
         write_state("graphiti_available", True)
         write_state("graphiti_searched", True)
@@ -89,8 +95,12 @@ class TestGraphitiKnowledgeReminder:
             text=True,
             timeout=10
         )
-        # Should not output when already searched
         assert result.returncode == 0
+        # MUST output valid JSON even when suppressing reminder
+        output = json.loads(result.stdout.strip())
+        assert output["continue"] == True
+        # Should NOT have systemMessage when already searched
+        assert "systemMessage" not in output or output.get("systemMessage") is None
 
     def test_includes_project_group_id(self):
         from session_state import write_state
