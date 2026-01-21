@@ -1,0 +1,39 @@
+{
+  "name": "taming-stan",
+  "version": "1.0.0",
+  "description": "All-in-one Claude Code enhancement: Graphiti memory, intelligent guards, and STAN.FLUX rules",
+  "bin": {
+    "taming-stan": "./bin/cli.js"
+  },
+  "scripts": {
+    "test": "pytest tests/ -v && bash test/installer.test.sh",
+    "test:python": "pytest tests/ -v",
+    "test:installer": "bash test/installer.test.sh"
+  },
+  "files": [
+    "hooks/",
+    "rules/",
+    "commands/",
+    "lib/",
+    "bin/"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "graphiti",
+    "knowledge-graph",
+    "hooks",
+    "rules",
+    "stan-flux"
+  ],
+  "author": "Mathias",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Milofax/taming-stan.git"
+  },
+  "homepage": "https://github.com/Milofax/taming-stan#readme",
+  "dependencies": {
+    "inquirer": "^8.2.6"
+  }
+}
