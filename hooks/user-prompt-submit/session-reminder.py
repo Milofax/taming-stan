@@ -59,11 +59,13 @@ def main():
     write_state("graphiti_searched", False)
     write_state("memory_saved", False)
     gid,pn = detect_group_id(hi.get("cwd",""))
+    # Store group_id for other hooks to use
+    write_state("project_group_id", gid)
+    # Only show project context (Graphiti reminder is in graphiti-knowledge-reminder.py)
     if gid != "main" and pn:
-        gids_str = f'"{gid}", "main"'
-        msg = f"📁 Projekt: {pn}\n   group_id: {gid}\n\n❌ !!graphiti_erst:PFLICHT vor Antwort\n   |auch_bei:Summary,Compaction,\"continue\"\n   |verstoß:Summary≠vollständig→Wissen verloren\n   →search_nodes(group_ids=[{gids_str}])"
+        msg = f"📁 Projekt: {pn}\n   group_id: {gid}"
     else:
-        msg = "📁 main (persönlich)\n\n❌ !!graphiti_erst:PFLICHT vor Antwort\n   |auch_bei:Summary,Compaction,\"continue\"\n   |verstoß:Summary≠vollständig→Wissen verloren\n   →search_nodes(group_ids=[\"main\"])"
+        msg = "📁 Kontext: main (persönlich)"
     print(json.dumps({"continue": True, "systemMessage": msg}))
 
 if __name__ == "__main__": main()
