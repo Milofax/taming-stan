@@ -248,7 +248,10 @@ const CORE_HOOK_MATCHERS = {
 };
 
 // Stan commands (always installed)
-const STAN_COMMANDS = ['stan/challenge.md', 'stan/help.md', 'stan/retro.md', 'stan/status.md'];
+const STAN_COMMANDS = ['stanflux/challenge.md', 'stanflux/help.md', 'stanflux/retro.md'];
+
+// Mandatory rules (always installed - PITH is required to understand hook symbols)
+const MANDATORY_RULES = ['pith.md'];
 
 /**
  * Scan entire hierarchy for hook installations
@@ -804,7 +807,7 @@ function installServices(selectedServices, options = {}) {
   }
   ensureDir(path.join(RULES_DIR, 'mcp-configurations'));
   ensureDir(path.join(COMMANDS_DIR, 'graphiti'));
-  ensureDir(path.join(COMMANDS_DIR, 'stan'));
+  ensureDir(path.join(COMMANDS_DIR, 'stanflux'));
 
   let installed = { hooks: 0, rules: 0, commands: 0 };
   const hookCommands = [];
@@ -842,6 +845,16 @@ function installServices(selectedServices, options = {}) {
     ensureDir(path.dirname(dest));
     if (fs.existsSync(source) && copyFile(source, dest)) {
       installed.commands++;
+    }
+  }
+
+  // Install mandatory rules (always - PITH required to understand hook symbols)
+  for (const rule of MANDATORY_RULES) {
+    const source = path.join(SOURCE_RULES_DIR, rule);
+    const dest = path.join(RULES_DIR, rule);
+    if (fs.existsSync(source) && copyFile(source, dest)) {
+      installed.rules++;
+      log(`Installed mandatory rule: ${rule}`);
     }
   }
 
@@ -1228,6 +1241,12 @@ async function uninstall() {
   for (const cmd of STAN_COMMANDS) {
     const cmdPath = path.join(COMMANDS_DIR, cmd);
     deleteFile(cmdPath);
+  }
+
+  // Remove mandatory rules
+  for (const rule of MANDATORY_RULES) {
+    const rulePath = path.join(RULES_DIR, rule);
+    deleteFile(rulePath);
   }
 
   // Clean settings.json
