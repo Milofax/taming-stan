@@ -85,7 +85,7 @@ def main():
     # Store group_id for other hooks to use
     write_state("project_group_id", gid)
     # Just show group_id - that's all that matters
-    msg = f"📁 {gid}"
+    msg = f"📁 group_id: {gid}"
     if warning:
         msg += f" | {warning}"
     print(json.dumps({"continue": True, "systemMessage": msg}))
