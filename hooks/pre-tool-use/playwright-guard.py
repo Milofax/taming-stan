@@ -30,18 +30,20 @@ def main():
                 return
     if tn == "mcp__mcp-funnel__bridge_tool_request":
         bt = ti.get("tool","")
-        # !!headless: Standard ist IMMER headless:true
-        # headless:false NUR wenn User EXPLIZIT in seiner Nachricht geschrieben hat:
-        # "zeig mir den Browser", "ich will die Tests sehen", etc.
-        if "playwright" in bt.lower() and ti.get("arguments",{}).get("headless") is False:
-            state = read_state()
-            # DENY-then-confirm: Claude muss bestätigen dass User es angefordert hat
-            if state.get("headless_user_requested", False):
-                write_state("headless_user_requested", False)  # Reset für nächstes Mal
-                print(json.dumps(allow())); return
-            write_state("headless_user_requested", True)
-            print(json.dumps(deny("💡 headless:true ist Standard. headless:false nur wenn User es explizit will.\n→User angefordert? JA=wiederholen|NEIN=headless:true")))
-            return
+        args = ti.get("arguments",{})
+        # !!headless: Standard ist headless:true
+        # headless:false nur wenn User es explizit will (Confirm-by-Retry)
+        if "playwright" in bt.lower():
+            headless_val = args.get("headless")
+            if headless_val is False:
+                state = read_state()
+                if state.get("headless_confirmed"):
+                    write_state("headless_confirmed", False)  # Reset für nächstes Mal
+                    print(json.dumps(allow()))
+                    return
+                write_state("headless_confirmed", True)
+                print(json.dumps(deny("💡 headless:true ist Standard.\n→User will Browser sehen? JA=wiederholen|NEIN=headless:true setzen")))
+                return
     print(json.dumps(allow()))
 
 if __name__ == "__main__": main()
