@@ -16,16 +16,19 @@ def main():
     try:
         hi = json.load(sys.stdin)
     except:
+        print(json.dumps({"continue": True}))
         return
 
     state = read_state()
 
     # Only remind if Graphiti is available
     if not state.get("graphiti_available", False):
+        print(json.dumps({"continue": True}))
         return
 
     # Don't spam if already searched in this prompt cycle
     if state.get("graphiti_searched", False):
+        print(json.dumps({"continue": True}))
         return
 
     # Get active group_ids for context
