@@ -219,9 +219,12 @@ def main():
         explicit_gid_provided = gid and gid.strip()
 
         # Guard: Only allow saving to group_ids where agent actually worked
+        # Also allow saving to current project (CWD) even without file operations
         if explicit_gid_provided and eff_gid != "main":
-            if eff_gid not in active_gids:
-                allowed_str = ", ".join(active_gids) if active_gids else "(none)"
+            if eff_gid not in active_gids and eff_gid != proj_gid:
+                # Build allowed list including current project
+                allowed_contexts = list(set(active_gids + ([proj_gid] if proj_gid else [])))
+                allowed_str = ", ".join(allowed_contexts) if allowed_contexts else "(none)"
                 print(json.dumps(deny(
                     f"⚠️ group_id '{eff_gid}' not in active contexts!\n"
                     f"Active: [{allowed_str}] + main\n"

@@ -459,6 +459,51 @@ class TestGroupIdContextGuard:
         assert "not in active contexts" in reason
         assert "(none)" in reason  # Shows empty active list
 
+    def test_save_to_current_project_without_file_ops_allows(self, graphiti_guard_runner, clean_state):
+        """Saving to project_group_id should work even without file operations.
+
+        Scenario: User is in /INFRASTRUCTURE/ (Git: Milofax/marakanda-infrastructure)
+        but hasn't read/edited any files yet. The CWD-based project_group_id should
+        still be allowed as a valid target.
+        """
+        # CWD detected as Milofax-infrastructure at SessionStart
+        ss.write_state("project_group_id", "Milofax-infrastructure")
+        ss.write_state("active_group_ids", [])  # No files read yet
+
+        hook_input = make_add_memory_input(
+            "Test Learning",
+            "Content about infrastructure",
+            source_description="User statement",
+            group_id="Milofax-infrastructure"
+        )
+        result = graphiti_guard_runner.run(hook_input)
+
+        # Should NOT deny for "not in active contexts"
+        reason = result["hookSpecificOutput"].get("permissionDecisionReason", "")
+        assert "not in active contexts" not in reason
+
+    def test_current_project_shown_in_allowed_contexts(self, graphiti_guard_runner, clean_state):
+        """When denying, the current project should be shown in allowed contexts."""
+        # CWD detected as project A
+        ss.write_state("project_group_id", "Milofax-project-a")
+        ss.write_state("active_group_ids", ["Milofax-project-b"])  # Worked in B
+
+        # Try to save to project C (not current, not active)
+        hook_input = make_add_memory_input(
+            "Test Learning",
+            "Some content",
+            source_description="User statement",
+            group_id="Milofax-project-c"
+        )
+        result = graphiti_guard_runner.run(hook_input)
+
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        reason = result["hookSpecificOutput"]["permissionDecisionReason"]
+        assert "not in active contexts" in reason
+        # Both current project AND active_group_ids should be shown
+        assert "Milofax-project-a" in reason  # Current project
+        assert "Milofax-project-b" in reason  # Active from file ops
+
 
 class TestRepeatToSkipAlternating:
     """Bug #2: Repeat to skip must work with alternating learnings.
