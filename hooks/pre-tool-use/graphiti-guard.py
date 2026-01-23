@@ -218,6 +218,18 @@ def main():
         # The "main = permanent" confirmation happens separately at line 262+
         explicit_gid_provided = gid and gid.strip()
 
+        # Guard: Only allow saving to group_ids where agent actually worked
+        if explicit_gid_provided and eff_gid != "main":
+            if eff_gid not in active_gids:
+                allowed_str = ", ".join(active_gids) if active_gids else "(none)"
+                print(json.dumps(deny(
+                    f"⚠️ group_id '{eff_gid}' not in active contexts!\n"
+                    f"Active: [{allowed_str}] + main\n"
+                    f"You can only save to projects where you worked this session.\n"
+                    f"→Use one of the active group_ids|Or 'main' for permanent knowledge"
+                )))
+                return
+
         if not explicit_gid_provided:
             # No group_id provided → need to ask which context to use
             # Check if group_id decision was already made

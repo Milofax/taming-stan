@@ -386,6 +386,80 @@ class TestTitleSearchability:
             assert "prefix" in reason.lower() or "unnecessary" in reason.lower() or "searchable" in reason.lower()
 
 
+class TestGroupIdContextGuard:
+    """Guard: Only allow saving to group_ids where agent actually worked."""
+
+    def test_save_to_untracked_group_id_denies(self, graphiti_guard_runner, clean_state):
+        """Saving to a group_id not in active_group_ids should deny."""
+        # Set active_group_ids to only contain one project
+        ss.write_state("active_group_ids", ["Milofax-project-a"])
+
+        # Try to save to a different project
+        hook_input = make_add_memory_input(
+            "Test Learning",
+            "Some content",
+            source_description="User statement",
+            group_id="Milofax-project-b"  # Not in active_group_ids!
+        )
+        result = graphiti_guard_runner.run(hook_input)
+
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        reason = result["hookSpecificOutput"]["permissionDecisionReason"]
+        assert "not in active contexts" in reason
+        assert "Milofax-project-b" in reason
+        assert "Milofax-project-a" in reason  # Shows what's allowed
+
+    def test_save_to_tracked_group_id_proceeds(self, graphiti_guard_runner, clean_state):
+        """Saving to a group_id in active_group_ids should proceed (may still ask other questions)."""
+        ss.write_state("active_group_ids", ["Milofax-project-a"])
+
+        hook_input = make_add_memory_input(
+            "Test Learning",
+            "Some content",
+            source_description="User statement",
+            group_id="Milofax-project-a"  # In active_group_ids!
+        )
+        result = graphiti_guard_runner.run(hook_input)
+
+        # Should NOT deny for "not in active contexts"
+        reason = result["hookSpecificOutput"].get("permissionDecisionReason", "")
+        assert "not in active contexts" not in reason
+
+    def test_save_to_main_always_allowed(self, graphiti_guard_runner, clean_state):
+        """Saving to 'main' should always be allowed (separate confirmation)."""
+        ss.write_state("active_group_ids", ["Milofax-project-a"])
+
+        hook_input = make_add_memory_input(
+            "Test Learning",
+            "Some content",
+            source_description="User statement",
+            group_id="main"
+        )
+        result = graphiti_guard_runner.run(hook_input)
+
+        # Should NOT deny for "not in active contexts"
+        reason = result["hookSpecificOutput"].get("permissionDecisionReason", "")
+        assert "not in active contexts" not in reason
+        # May ask about main confirmation, but that's a different check
+
+    def test_no_active_contexts_shows_none(self, graphiti_guard_runner, clean_state):
+        """When no active contexts, message should indicate that."""
+        # No active_group_ids set
+
+        hook_input = make_add_memory_input(
+            "Test Learning",
+            "Some content",
+            source_description="User statement",
+            group_id="some-random-project"
+        )
+        result = graphiti_guard_runner.run(hook_input)
+
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        reason = result["hookSpecificOutput"]["permissionDecisionReason"]
+        assert "not in active contexts" in reason
+        assert "(none)" in reason  # Shows empty active list
+
+
 class TestRepeatToSkipAlternating:
     """Bug #2: Repeat to skip must work with alternating learnings.
 
