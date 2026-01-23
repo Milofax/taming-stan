@@ -253,28 +253,42 @@ def main():
         version_confirmed = False
         if tech_found and not has_version(body):
             version_pending = state.get("version_pending",{})
-            if not (version_pending.get("name") == name and version_pending.get("content_hash") == curr_hash):
-                write_state("version_pending",{"name":name,"content_hash":curr_hash})
+            pending_key = hashlib.md5(name.encode()).hexdigest()[:8]
+            if pending_key not in version_pending:
+                version_pending[pending_key] = {"name":name,"content_hash":curr_hash}
+                write_state("version_pending", version_pending)
                 print(json.dumps(deny(f"❤️ '{tech_kw}' without version. Recommended: '{tech_kw} v1.2.3: ...'\n→Add version|Repeat to skip")))
                 return
             version_confirmed = True  # Cleared at the end
 
         if eff_gid == "main":
-            pending = state.get("main_pending",{})
-            if pending.get("name") == name:
-                write_state("main_pending",{})
+            main_pending = state.get("main_pending",{})
+            pending_key = hashlib.md5(name.encode()).hexdigest()[:8]
+            if pending_key in main_pending:
+                # Key exists = repeat confirmed, allow
+                content_unchanged = main_pending[pending_key].get("content_hash") == curr_hash
+                del main_pending[pending_key]
+                write_state("main_pending", main_pending)
                 write_state("group_id_decision",{})  # Clear decision
-                if version_confirmed: write_state("version_pending",{})
+                if version_confirmed:
+                    version_pending = state.get("version_pending",{})
+                    version_pending.pop(pending_key, None)
+                    write_state("version_pending", version_pending)
                 write_state("memory_saved",True)
-                msg = "Content unchanged - abstraction recommended!" if pending.get("content_hash") == curr_hash else ""
+                msg = "Content unchanged - abstraction recommended!" if content_unchanged else ""
                 print(json.dumps(allow_with_msg(msg) if msg else allow()))
                 return
-            write_state("main_pending",{"name":name,"content_hash":curr_hash})
+            main_pending[pending_key] = {"name":name,"content_hash":curr_hash}
+            write_state("main_pending", main_pending)
             print(json.dumps(deny(f"💡 'main' = permanent. Is this correct?\n1. Transferable? 2. Abstracted? 3. Relevant in 5 years?\n→NO=project-specific|YES=repeat with name='{name}'")))
             return
-        # Non-main save: clear all pending states
+        # Non-main save: clear pending states for this learning
         write_state("group_id_decision",{})  # Clear decision
-        if version_confirmed: write_state("version_pending",{})
+        if version_confirmed:
+            pending_key = hashlib.md5(name.encode()).hexdigest()[:8]
+            version_pending = state.get("version_pending",{})
+            version_pending.pop(pending_key, None)
+            write_state("version_pending", version_pending)
         write_state("memory_saved",True)
         print(json.dumps(allow())); return
 

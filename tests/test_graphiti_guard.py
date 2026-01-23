@@ -386,6 +386,133 @@ class TestTitleSearchability:
             assert "prefix" in reason.lower() or "unnecessary" in reason.lower() or "searchable" in reason.lower()
 
 
+class TestRepeatToSkipAlternating:
+    """Bug #2: Repeat to skip must work with alternating learnings.
+
+    The bug: pending states (main_pending, version_pending) store only ONE name.
+    When multiple learnings alternate, they overwrite each other and the
+    "repeat to confirm" pattern never succeeds.
+
+    Expected behavior: Each learning should have its own pending state entry,
+    keyed by a hash of the name.
+    """
+
+    def test_alternating_main_learnings_both_can_skip(self, graphiti_guard_runner, clean_state):
+        """Alternating learnings to main should both eventually allow."""
+        import hashlib
+
+        # Setup: Two learnings alternating, both to main
+        learning_a = make_add_memory_input(
+            "Learning A",
+            "Content A about something",
+            source_description="User statement",
+            group_id="main"
+        )
+        learning_b = make_add_memory_input(
+            "Learning B",
+            "Content B about something else",
+            source_description="User statement",
+            group_id="main"
+        )
+
+        # Round 1: Both should be blocked (first time)
+        result_a1 = graphiti_guard_runner.run(learning_a)
+        assert result_a1["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "main" in result_a1["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+        result_b1 = graphiti_guard_runner.run(learning_b)
+        assert result_b1["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "main" in result_b1["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+        # Round 2: Both should now be allowed (repeat = confirm)
+        result_a2 = graphiti_guard_runner.run(learning_a)
+        assert result_a2["hookSpecificOutput"]["permissionDecision"] == "allow", \
+            f"Learning A should allow on repeat, got: {result_a2}"
+
+        result_b2 = graphiti_guard_runner.run(learning_b)
+        assert result_b2["hookSpecificOutput"]["permissionDecision"] == "allow", \
+            f"Learning B should allow on repeat, got: {result_b2}"
+
+    def test_single_main_learning_repeat_still_works(self, graphiti_guard_runner, clean_state):
+        """Single learning repeat to main should still work (regression test)."""
+        learning = make_add_memory_input(
+            "Single Learning",
+            "Content about a topic",
+            source_description="User statement",
+            group_id="main"
+        )
+
+        # First call: blocked
+        result1 = graphiti_guard_runner.run(learning)
+        assert result1["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+        # Second call: allowed
+        result2 = graphiti_guard_runner.run(learning)
+        assert result2["hookSpecificOutput"]["permissionDecision"] == "allow"
+
+    def test_alternating_version_warnings_both_can_skip(self, graphiti_guard_runner, clean_state):
+        """Alternating technical learnings without version should both skip on repeat."""
+        import hashlib
+        ss.write_state("active_group_ids", ["project-test"])
+
+        # Pre-set group_id decisions to skip that step
+        body_a = "React hooks are great"
+        body_b = "Django ORM is powerful"
+        hash_a = hashlib.md5(body_a.encode()).hexdigest()[:8]
+        hash_b = hashlib.md5(body_b.encode()).hexdigest()[:8]
+
+        learning_a = make_add_memory_input(
+            "React Learning",
+            body_a,
+            source_description="Own experience",
+            group_id="project-test"
+        )
+        learning_b = make_add_memory_input(
+            "Django Learning",
+            body_b,
+            source_description="Own experience",
+            group_id="project-test"
+        )
+
+        # Round 1: Both should warn about version (first time)
+        result_a1 = graphiti_guard_runner.run(learning_a)
+        assert result_a1["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "version" in result_a1["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+        result_b1 = graphiti_guard_runner.run(learning_b)
+        assert result_b1["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "version" in result_b1["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+        # Round 2: Both should now be allowed (repeat = skip version warning)
+        result_a2 = graphiti_guard_runner.run(learning_a)
+        assert result_a2["hookSpecificOutput"]["permissionDecision"] == "allow", \
+            f"React learning should allow on repeat, got: {result_a2}"
+
+        result_b2 = graphiti_guard_runner.run(learning_b)
+        assert result_b2["hookSpecificOutput"]["permissionDecision"] == "allow", \
+            f"Django learning should allow on repeat, got: {result_b2}"
+
+    def test_single_version_warning_repeat_still_works(self, graphiti_guard_runner, clean_state):
+        """Single technical learning repeat should still work (regression test)."""
+        ss.write_state("active_group_ids", ["project-test"])
+
+        learning = make_add_memory_input(
+            "Python Learning",
+            "Python asyncio is useful",
+            source_description="Own experience",
+            group_id="project-test"
+        )
+
+        # First call: version warning
+        result1 = graphiti_guard_runner.run(learning)
+        assert result1["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "version" in result1["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+        # Second call: allowed
+        result2 = graphiti_guard_runner.run(learning)
+        assert result2["hookSpecificOutput"]["permissionDecision"] == "allow"
+
+
 class TestEdgeCases:
     """Edge cases and error handling."""
 
