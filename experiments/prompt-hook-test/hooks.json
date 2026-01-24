@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "You are a learning detection skill running as a PostToolUse hook.\n\nAnalyze this tool result for potential learnings worth saving.\n\nA learning is:\n- A gotcha or pitfall discovered\n- A workaround that solved a problem\n- A pattern or best practice identified\n- Version-specific behavior (e.g., 'React 18 requires...')\n\nIF you detect a learning:\nReturn JSON with systemMessage containing the learning details:\n{\n  \"continue\": true,\n  \"systemMessage\": \"[LEARNING DETECTED] Topic: [short title]. Details: [description]. Consider saving to Graphiti with group_id Milofax-taming-stan.\"\n}\n\nIF no learning detected:\nReturn:\n{\n  \"continue\": true,\n  \"suppressOutput\": true\n}\n\nBe selective - not every tool result is a learning.",
+            "timeout": 10
+          }
+        ],
+        "description": "EXPERIMENT: Detect learnings via type:prompt, suggest saving via systemMessage"
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Session ending. Review the session for unsaved learnings.\n\nReturn JSON:\n{\n  \"decision\": \"block\",\n  \"reason\": \"Learnings detected but not saved: [list]\",\n  \"systemMessage\": \"Before ending, consider saving these learnings to Graphiti: [list]\"\n}\n\nOR if no unsaved learnings:\n{\n  \"decision\": \"approve\",\n  \"reason\": \"No unsaved learnings detected\"\n}",
+            "timeout": 15
+          }
+        ],
+        "description": "EXPERIMENT: Check for unsaved learnings at session end"
+      }
+    ]
+  }
+}
