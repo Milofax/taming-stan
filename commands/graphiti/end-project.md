@@ -1,8 +1,9 @@
 #PITH:1.2
-#CMD:graphiti/end-project|Projekt abschließen+Learnings promoten+Graph clearen
+#CMD:graphiti/end-project|Projekt abschließen+Learnings promoten
 
-!zweck:Sicheres Projektende mit Learning-Review und optionalem Cleanup
+!zweck:Learnings aus Projekt-Kontext nach main promoten
 !trigger:User sagt "Projekt fertig"|"Projekt abschließen"|"Ende Projekt"
+!prinzip:Wissen NIEMALS löschen→Zettelkasten
 
 ## workflow
 
@@ -22,28 +23,20 @@ für_jedes_ausgewählte:
   |kopieren:graphiti__add_memory(name="[learning]",episode_body="[details]",source_description="Promoted aus Projekt [name]",group_id="main")
 ausgabe:"[N] Learnings nach main promoted"
 
-### 4_cleanup_fragen
-frage:"Soll der Projekt-Graph jetzt geleert werden? (group_id: [project-id])"
-  |ja→graphiti__clear_graph(group_ids=["[project-id]"])→"Graph geleert"
-  |nein→"Graph bleibt erhalten für spätere Referenz"
-
-### 5_abschluss
+### 4_abschluss
 ausgabe:
   |promoted:"[N] Learnings/Decisions nach main übernommen"
-  |status:cleared|preserved
+  |hinweis:"Projekt-Wissen bleibt in [project-id] erhalten"
   |hinweis:"Persönliches Wissen in `main` bleibt unberührt"
 
 ## anti_patterns
-!nie:clear_graph OHNE Learning-Review
-!nie:clear_graph auf "main"(VERBOTEN)
-!nie:Automatisch clearen ohne User-Bestätigung
+!!nie:clear_graph→Wissen löschen widerspricht Zettelkasten
+!nie:Automatisches Promoten ohne User-Bestätigung
 
 ## beispiel_dialog
-user:"/graphiti/end-project"
-claude:"Projekt erkannt: INFRASTRUCTURE (group_id: project-infrastructure). Korrekt?"
+user:"/graphiti:end-project"
+claude:"Projekt erkannt: INFRASTRUCTURE (group_id: Milofax-infrastructure). Korrekt?"
 user:"ja"
 claude:"Gefundene Learnings/Decisions: [Liste]. Welche nach main promoten?"
 user:"1, 3, 5"
-claude:"3 Learnings promoted. Projekt-Graph leeren?"
-user:"ja"
-claude:"Erledigt. 3 Learnings in main, Graph project-infrastructure geleert."
+claude:"3 Learnings nach main promoted. Projekt-Wissen bleibt in Milofax-infrastructure erhalten."

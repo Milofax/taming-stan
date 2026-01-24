@@ -26,7 +26,7 @@ get_entity_edge:uuid→Details zu Beziehung
 get_episodes:group_ids?+max_episodes?→Alle Episodes abrufen
 delete_entity_edge:uuid→Beziehung löschen
 delete_episode:uuid→Episode löschen
-clear_graph:group_ids?→Graph leeren(⚠️destruktiv,IMMER fragen)
+clear_graph:VERBOTEN→Wissen NIEMALS löschen(Zettelkasten-Prinzip)
 get_status:→Service-Status prüfen
 
 ## entity_types(18)
@@ -175,10 +175,10 @@ beispiele_ungültig:main(reserviert)|Milofax/repo(Slash verboten)
 main:Langfristiges Wissen(PERMANENT)|Kontakte,Learnings,Decisions,Preferences,Goals,Concepts,Documents,Works
   |NIEMALS löschen|Überlebt alle Kontexte
   |frage:"Werde ich das in 5 Jahren noch wissen wollen?"→JA=main
-Owner-RepoName:Kontextgebundenes Wissen(TEMPORÄR)|Requirements,Procedures,Architektur,Projekt-Tasks
+Owner-RepoName:Kontextgebundenes Wissen|Requirements,Procedures,Architektur,Projekt-Tasks
   |Format:Owner-RepoName(z.B.Milofax-infrastructure)
-  |Löschen erlaubt nach Kontext-Ende:clear_graph(group_ids:["Milofax-projektname"])
-  |frage:"Ist das nur für diesen Kontext relevant?"→JA=Owner-RepoName
+  |bleibt erhalten:Auch nach Projekt-Ende(Zettelkasten-Prinzip)
+  |frage:"Ist das primär für diesen Kontext relevant?"→JA=Owner-RepoName
 
 ## wann_welche_group
 main:Learning(allgemeingültig)|Decision(übertragbar)|Kontakt|Präferenz|Ziel|Concept|Document|Work
@@ -188,8 +188,8 @@ beide_suchen:Arbeit in Kontext→search(group_ids:["main","Milofax-reponame"])|L
 ## group_workflow
 kontext_start:Dateien indexieren mit group_id:"Owner-RepoName"
 kontext_arbeit:search(group_ids:["main","Owner-RepoName"])→beides durchsuchen
-kontext_ende:ERST langfristiges Wissen nach "main" promoten→DANN clear_graph(group_ids:["Owner-RepoName"])
-übertragbar:Learning/Decision aus Kontext→nach "main" speichern(bleibt permanent)
+kontext_wechsel:Allgemeingültige Learnings nach "main" promoten(optional)
+übertragbar:Learning/Decision aus Kontext→nach "main" kopieren wenn allgemeingültig
 
 ## kontext_erkennung
 aus_git:Hook erkennt GitHub Remote→Owner/Repo→ersetzt "/" durch "-"
@@ -198,16 +198,15 @@ aus_git:Hook erkennt GitHub Remote→Owner/Repo→ersetzt "/" durch "-"
 aus_claude_md:CLAUDE.md kann graphiti_group_id definieren(wenn vorhanden)
 fallback:Kein Git Remote?→User fragen:"Welche group_id soll ich verwenden?"
 
-## vor_kontext_ende
-!!review:VOR clear_graph→IMMER langfristig relevantes Wissen reviewen
-  |verstoß:clear_graph ohne Review→übertragbares Wissen verloren→irreversibel
-  |aktion:search_nodes(entity_types:["Learning","Decision","Concept"])→promoten→DANN clear_graph
-  |frage:"Gibt es allgemeingültige Erkenntnisse die ich nach main promoten soll?"
-!!promote:Übertragbare Learnings/Decisions/Concepts→add_memory(...,group_id:"main")→DANN clear_graph
-  |verstoß:Wertvolles Wissen nicht promotet→nach clear_graph verloren
-!verlust:Nach clear_graph ist Kontext-Wissen WEG|Nur "main" Wissen überlebt
+## learning_promotion
+!wann:User fragt "Was hast du gelernt?"|"/stanflux:retro"|"/graphiti:end-project"
+!workflow:
+  |1:search_nodes(entity_types:["Learning","Decision","Concept"],group_ids:["Owner-RepoName"])
+  |2:User wählt was allgemeingültig ist
+  |3:add_memory(...,group_id:"main",source:"Promoted aus [Projekt]")
+!prinzip:Wissen bleibt in Projekt UND wird nach main kopiert(nicht verschoben)
 beispiel:Learning "Claude Opus 4.5 über CLIProxyAPI funktioniert gut"→nach main(allgemeingültig)
-beispiel:Requirement "API muss /health haben"→NICHT nach main(nur für Milofax-my-api)
+beispiel:Requirement "API muss /health haben"→bleibt nur in Milofax-my-api(projektspezifisch)
 
 ## params
 add_memory:name(required)|episode_body(required)|source_description(required)|group_id(default:"main")|source:"text"|"json"|"message"
